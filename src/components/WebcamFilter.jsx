@@ -81,22 +81,24 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
                 let drawWidth, drawHeight, offsetX, offsetY;
 
+                // Ajustar vídeo para caber dentro do canvas (sem cortar)
                 if (videoRatio > canvasRatio) {
-                    // Vídeo mais largo: cortar laterais
+                    // Vídeo mais largo: ajustar altura do canvas
                     drawHeight = canvasHeight;
                     drawWidth = drawHeight * videoRatio;
-                    offsetX = (canvasWidth - drawWidth) / 2;
+                    offsetX = (canvasWidth - drawWidth) / 2; // centralizar horizontal
                     offsetY = 0;
                 } else {
-                    // Vídeo mais alto: cortar topo e base
+                    // Vídeo mais alto: ajustar largura do canvas
                     drawWidth = canvasWidth;
                     drawHeight = drawWidth / videoRatio;
                     offsetX = 0;
-                    offsetY = (canvasHeight - drawHeight) / 2;
+                    offsetY = (canvasHeight - drawHeight) / 2; // centralizar vertical
                 }
 
-                // Limpar canvas
-                context.clearRect(0, 0, canvasWidth, canvasHeight);
+                // Limpar canvas e preencher fundo (opcional, para não sobrar transparência)
+                context.fillStyle = "#000";
+                context.fillRect(0, 0, canvasWidth, canvasHeight);
 
                 // Desenhar vídeo
                 context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
