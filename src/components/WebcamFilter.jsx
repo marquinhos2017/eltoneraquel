@@ -61,35 +61,36 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         const drawFrame = () => {
             const video = webcamRef.current.video;
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                // Definir canvas para ocupar 90% da largura da tela, mantendo proporção retrato
-                const canvasWidth = window.innerWidth * 0.9;
-                const canvasHeight = canvasWidth * (16 / 9); // ou você pode calcular conforme proporção vídeo
+                // Usar proporção da tela do dispositivo
+                const canvasWidth = window.innerWidth * 0.95; // 95% da largura da tela
+                const canvasHeight = window.innerHeight * 0.7; // 70% da altura
 
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
 
-                // Centralizar vídeo e ajustar proporção
                 const videoRatio = video.videoWidth / video.videoHeight;
-                let drawWidth = canvas.width;
-                let drawHeight = canvas.height;
+                const canvasRatio = canvasWidth / canvasHeight;
 
-                if (videoRatio > 1) { // vídeo mais largo que alto
-                    drawHeight = canvas.height;
-                    drawWidth = drawHeight * videoRatio;
-                } else { // vídeo mais alto ou quadrado
-                    drawWidth = canvas.width;
-                    drawHeight = drawWidth / videoRatio;
+                let drawWidth, drawHeight, offsetX, offsetY;
+
+                if (videoRatio > canvasRatio) {
+                    drawWidth = canvasWidth;
+                    drawHeight = canvasWidth / videoRatio;
+                    offsetX = 0;
+                    offsetY = (canvasHeight - drawHeight) / 2;
+                } else {
+                    drawHeight = canvasHeight;
+                    drawWidth = canvasHeight * videoRatio;
+                    offsetX = (canvasWidth - drawWidth) / 2;
+                    offsetY = 0;
                 }
 
-                const offsetX = (canvas.width - drawWidth) / 2;
-                const offsetY = (canvas.height - drawHeight) / 2;
-
-                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.clearRect(0, 0, canvasWidth, canvasHeight);
                 context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
 
                 // Aplicar LUT
                 if (lutData) {
-                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
                     applyLUTFilter(imageData, lutData);
                     context.putImageData(imageData, 0, 0);
                 }
@@ -97,19 +98,19 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 // Overlay centralizado
                 if (overlayImg) {
                     const imgRatio = overlayImg.width / overlayImg.height;
-                    const canvasRatio = canvas.width / canvas.height;
+                    const canvasRatio = canvasWidth / canvasHeight;
 
                     let overlayWidth, overlayHeight, overlayX, overlayY;
 
                     if (imgRatio > canvasRatio) {
-                        overlayWidth = canvas.width;
-                        overlayHeight = canvas.width / imgRatio;
+                        overlayWidth = canvasWidth;
+                        overlayHeight = canvasWidth / imgRatio;
                         overlayX = 0;
-                        overlayY = (canvas.height - overlayHeight) / 2;
+                        overlayY = (canvasHeight - overlayHeight) / 2;
                     } else {
-                        overlayHeight = canvas.height;
-                        overlayWidth = canvas.height * imgRatio;
-                        overlayX = (canvas.width - overlayWidth) / 2;
+                        overlayHeight = canvasHeight;
+                        overlayWidth = canvasHeight * imgRatio;
+                        overlayX = (canvasWidth - overlayWidth) / 2;
                         overlayY = 0;
                     }
 
