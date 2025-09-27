@@ -83,19 +83,23 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 let drawWidth, drawHeight, offsetX, offsetY;
 
                 if (videoRatio > canvasRatio) {
-                    // Vídeo mais largo que o canvas: cortar laterais
-                    drawHeight = canvasHeight;
-                    drawWidth = videoRatio * drawHeight;
-                    offsetX = -(drawWidth - canvasWidth) / 2;
-                    offsetY = 0;
-                } else {
-                    // Vídeo mais alto que o canvas: cortar topo e base
+                    // Vídeo mais largo: ajustar largura, sobrar espaço nas laterais
                     drawWidth = canvasWidth;
                     drawHeight = drawWidth / videoRatio;
                     offsetX = 0;
-                    offsetY = -(drawHeight - canvasHeight) / 2;
+                    offsetY = (canvasHeight - drawHeight) / 2; // centralizar verticalmente
+                } else {
+                    // Vídeo mais alto: ajustar altura, sobrar espaço no topo e base
+                    drawHeight = canvasHeight;
+                    drawWidth = drawHeight * videoRatio;
+                    offsetX = (canvasWidth - drawWidth) / 2; // centralizar horizontalmente
+                    offsetY = 0;
                 }
 
+                // Limpar canvas para evitar sombras das bordas
+                context.clearRect(0, 0, canvasWidth, canvasHeight);
+
+                // Desenhar vídeo com “contain”
                 context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
 
                 // Aplicar LUT
