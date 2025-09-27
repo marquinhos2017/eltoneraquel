@@ -59,14 +59,19 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         const draw = () => {
             const video = webcamRef.current.video;
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                const cw = canvas.width;
-                const ch = canvas.height;
+                const cw = 540;  // processa em resolução menor
+                const ch = 960;
+
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = cw;
+                offCanvas.height = ch;
+                const offCtx = offCanvas.getContext('2d');
+
+                // Ajuste proporcional
                 const vw = video.videoWidth;
                 const vh = video.videoHeight;
-
                 const videoRatio = vw / vh;
                 const canvasRatio = cw / ch;
-
                 let dw, dh, dx, dy;
 
                 if (videoRatio > canvasRatio) {
@@ -81,23 +86,27 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                     dy = (ch - dh) / 2;
                 }
 
-                ctx.fillStyle = "#000";
-                ctx.fillRect(0, 0, cw, ch);
-                ctx.drawImage(video, dx, dy, dw, dh);
+                offCtx.drawImage(video, dx, dy, dw, dh);
 
                 if (lutData) {
-                    const imageData = ctx.getImageData(0, 0, cw, ch);
+                    const imageData = offCtx.getImageData(0, 0, cw, ch);
                     applyLUTFilter(imageData, lutData);
-                    ctx.putImageData(imageData, 0, 0);
+                    offCtx.putImageData(imageData, 0, 0);
                 }
 
                 if (overlayImg) {
-                    ctx.drawImage(overlayImg, 0, 0, cw, ch);
+                    offCtx.drawImage(overlayImg, 0, 0, cw, ch);
                 }
+
+                // Desenhar no canvas principal em alta resolução
+                const mainCanvas = canvasRef.current;
+                const mainCtx = mainCanvas.getContext('2d');
+                mainCtx.drawImage(offCanvas, 0, 0, mainCanvas.width, mainCanvas.height);
             }
 
             animationFrameId = requestAnimationFrame(draw);
         };
+
 
         draw();
         return () => cancelAnimationFrame(animationFrameId);
