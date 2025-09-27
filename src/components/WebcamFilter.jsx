@@ -70,36 +70,29 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
             const video = webcamRef.current.video;
 
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+                const canvasWidth = canvas.width;  // 1080
+                const canvasHeight = canvas.height; // 1920
+
                 const videoWidth = video.videoWidth;
                 const videoHeight = video.videoHeight;
 
-                const canvasWidth = canvas.width;
-                const canvasHeight = canvas.height;
-
-                // Calcular proporção da webcam e canvas
                 const videoRatio = videoWidth / videoHeight;
                 const canvasRatio = canvasWidth / canvasHeight;
 
                 let drawWidth, drawHeight, offsetX, offsetY;
 
-                if (videoRatio > canvasRatio) {
-                    // Vídeo mais largo: ajustar largura, sobrar espaço nas laterais
-                    drawWidth = canvasWidth;
-                    drawHeight = drawWidth / videoRatio;
-                    offsetX = 0;
-                    offsetY = (canvasHeight - drawHeight) / 2; // centralizar verticalmente
-                } else {
-                    // Vídeo mais alto: ajustar altura, sobrar espaço no topo e base
-                    drawHeight = canvasHeight;
-                    drawWidth = drawHeight * videoRatio;
-                    offsetX = (canvasWidth - drawWidth) / 2; // centralizar horizontalmente
-                    offsetY = 0;
-                }
+                // Ajustar vídeo para caber no canvas vertical
+                drawWidth = canvasWidth;
+                drawHeight = drawWidth / videoRatio;
 
-                // Limpar canvas para evitar sombras das bordas
-                context.clearRect(0, 0, canvasWidth, canvasHeight);
+                offsetX = 0;
+                offsetY = (canvasHeight - drawHeight) / 2; // centralizar verticalmente
 
-                // Desenhar vídeo com “contain”
+                // Limpar canvas
+                context.fillStyle = "#000"; // fundo preto para barras
+                context.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                // Desenhar vídeo
                 context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
 
                 // Aplicar LUT
