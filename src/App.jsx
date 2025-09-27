@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import WebcamFilter from './components/WebcamFilter';
 import { FaPalette } from 'react-icons/fa';
 import './App.css';
 
 function App() {
   const [selectedFilter, setSelectedFilter] = useState('');
+  const [showSplash, setShowSplash] = useState(true);
   const webcamRef = useRef(null);
 
   const filters = [
@@ -25,34 +26,56 @@ function App() {
     }
   };
 
+  // Fechar splash automaticamente após 4 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 4000); // 4 segundos
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <div className="controls horizontal-scroll">
-          {filters.map(filter => (
-            <button
-              key={filter.value || 'nofilter'}
-              className={`filter-btn ${selectedFilter === filter.value ? 'active' : ''}`}
-              onClick={() => setSelectedFilter(filter.value || null)}
-            >
-              <FaPalette style={{ marginRight: 8 }} />
-              {filter.name}
-            </button>
-          ))}
+      {showSplash ? (
+        <div className="splash-screen fade-in">
+          <h1>Bem-vindo ao Casamento de Elton e Raquel</h1>
+          <p>Compartilhe esse momento especial com o filtro oficial do casamento. Não esqueça de marcar os noivos!</p>
+          <div className="loading">
+            <span className="dot">.</span>
+            <span className="dot">.</span>
+            <span className="dot">.</span>
+          </div>
         </div>
-      </header>
+      ) : (
+        <>
+          <header className="App-header fade-in">
+            <div className="controls horizontal-scroll">
+              {filters.map(filter => (
+                <button
+                  key={filter.value || 'nofilter'}
+                  className={`filter-btn ${selectedFilter === filter.value ? 'active' : ''}`}
+                  onClick={() => setSelectedFilter(filter.value || null)}
+                >
+                  <FaPalette style={{ marginRight: 8 }} />
+                  {filter.name}
+                </button>
+              ))}
+            </div>
+          </header>
 
+          <main className="main-content fade-in">
+            <WebcamFilter
+              ref={webcamRef}
+              filterPath={selectedFilter}
+              className="webcam-container"
+            />
 
-      <main className="main-content">
-        <WebcamFilter
-          ref={webcamRef}
-          filterPath={selectedFilter}
-          className="webcam-container"
-        />
-
-        {/* Botão de captura estilo bolinha do iOS */}
-
-      </main>
+            <button className="capture-btn-ios" onClick={capturePhoto}>
+              📸
+            </button>
+          </main>
+        </>
+      )}
     </div>
   );
 }

@@ -69,47 +69,49 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         const draw = () => {
             const video = webcamRef.current.video;
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                const cw = offCanvas.width;
-                const ch = offCanvas.height;
-
-                // Ajuste proporcional do vídeo
                 const vw = video.videoWidth;
                 const vh = video.videoHeight;
-                const videoRatio = vw / vh;
-                const canvasRatio = cw / ch;
-                let dw, dh, dx, dy;
 
-                if (videoRatio > canvasRatio) {
-                    dh = ch;
-                    dw = dh * videoRatio;
-                    dx = (cw - dw) / 2;
-                    dy = 0;
+                // Ajuste proporcional do vídeo para preencher o canvas principal
+                canvas.width = vw;
+                canvas.height = vh;
+                const ctx = canvas.getContext('2d');
+
+                ctx.clearRect(0, 0, vw, vh);
+
+                // Aplicar LUT e overlay
+                if (lutData || overlayImg) {
+                    // Offscreen igual tamanho do vídeo real
+                    if (!offCanvasRef.current) {
+                        offCanvasRef.current = document.createElement('canvas');
+                    }
+                    const offCanvas = offCanvasRef.current;
+                    offCanvas.width = vw;
+                    offCanvas.height = vh;
+                    const offCtx = offCanvas.getContext('2d');
+
+                    offCtx.clearRect(0, 0, vw, vh);
+                    offCtx.drawImage(video, 0, 0, vw, vh);
+
+                    if (lutData) {
+                        const imageData = offCtx.getImageData(0, 0, vw, vh);
+                        applyLUTFilter(imageData, lutData);
+                        offCtx.putImageData(imageData, 0, 0);
+                    }
+
+                    if (overlayImg) {
+                        offCtx.drawImage(overlayImg, 0, 0, vw, vh);
+                    }
+
+                    ctx.drawImage(offCanvas, 0, 0, vw, vh);
                 } else {
-                    dw = cw;
-                    dh = dw / videoRatio;
-                    dx = 0;
-                    dy = (ch - dh) / 2;
+                    // Apenas desenha vídeo
+                    ctx.drawImage(video, 0, 0, vw, vh);
                 }
-
-                offCtx.clearRect(0, 0, cw, ch);
-                offCtx.drawImage(video, dx, dy, dw, dh);
-
-                if (lutData) {
-                    const imageData = offCtx.getImageData(0, 0, cw, ch);
-                    applyLUTFilter(imageData, lutData);
-                    offCtx.putImageData(imageData, 0, 0);
-                }
-
-                if (overlayImg) {
-                    offCtx.drawImage(overlayImg, 0, 0, cw, ch);
-                }
-
-                const mainCtx = canvas.getContext('2d');
-                mainCtx.drawImage(offCanvas, 0, 0, canvas.width, canvas.height);
             }
-
-            animationFrameId = requestAnimationFrame(draw);
+            requestAnimationFrame(draw);
         };
+
 
         draw();
         return () => cancelAnimationFrame(animationFrameId);
