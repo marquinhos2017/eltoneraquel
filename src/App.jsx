@@ -8,11 +8,11 @@ function App() {
   const webcamRef = useRef(null);
 
   const filters = [
-    { name: 'Sem Filtro', value: '' },
-    { name: 'Efeito 1', value: '/filters/a.cube' },
-    { name: 'Efeito 2', value: '/filters/b.cube' },
-    { name: 'Efeito 3', value: '/filters/1.cube' },
-    { name: 'Efeito 4', value: '/filters/2.cube' },
+    { name: '1', value: '' },
+    { name: '2', value: '/filters/a.cube' },
+    { name: '3', value: '/filters/b.cube' },
+    { name: '4', value: '/filters/1.cube' },
+    { name: '5', value: '/filters/2.cube' },
   ];
 
   const capturePhoto = () => {
@@ -28,12 +28,12 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <div className="controls">
+        <div className="controls horizontal-scroll">
           {filters.map(filter => (
             <button
-              key={filter.value}
+              key={filter.value || 'nofilter'}
               className={`filter-btn ${selectedFilter === filter.value ? 'active' : ''}`}
-              onClick={() => setSelectedFilter(filter.value)}
+              onClick={() => setSelectedFilter(filter.value || null)}
             >
               <FaPalette style={{ marginRight: 8 }} />
               {filter.name}
@@ -41,6 +41,7 @@ function App() {
           ))}
         </div>
       </header>
+
 
       <main className="main-content">
         <WebcamFilter

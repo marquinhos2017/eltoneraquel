@@ -382,3 +382,70 @@ code {
 .capture-btn-ios:active {
   transform: translateX(-50%) scale(0.9);
 }
+
+.controls.horizontal-scroll {
+
+
+  /* rolagem horizontal */
+
+  background-color: #f6f6f8;
+  border-radius: 12px;
+  scroll-behavior: smooth;
+}
+
+
+
+
+/* Cada botão não encolhe e mantém tamanho mínimo */
+.filter-btn {
+
+
+  background: #f6f6f8;
+  color: #0C0C0C;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  /* garante largura mínima para não cortar */
+}
+
+.filter-btn.active,
+.filter-btn:hover {
+  background: #6f68dd;
+  color: white;
+}
+
+.controls.horizontal-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  /* impede quebra de linha */
+  overflow-x: auto;
+  /* permite rolagem horizontal */
+  gap: 10px;
+  padding: 10px 15px;
+  /* adiciona espaço nas laterais */
+  background-color: #f6f6f8;
+  border-radius: 12px;
+  scroll-behavior: smooth;
+}
+
+/* Esconde barra de rolagem */
+.controls.horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.controls.horizontal-scroll {
+  scrollbar-width: none;
+}
+
+/* Cada botão mantém tamanho mínimo e não encolhe */
+
+
+.filter-btn.active,
+.filter-btn:hover {
+  background: #6f68dd;
+  color: white;
+}

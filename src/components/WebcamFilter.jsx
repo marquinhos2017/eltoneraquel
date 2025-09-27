@@ -217,17 +217,27 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                     bottom: '30px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    padding: '15px 25px',
+                    width: '70px',
+                    height: '70px',
                     borderRadius: '50%',
-                    backgroundColor: '#34A853',
-                    color: '#fff',
-                    fontSize: '24px',
+                    backgroundColor: 'white',
+                    border: '4px solid rgba(0,0,0,0.2)',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    fontSize: '32px',
                     cursor: 'pointer',
-                    zIndex: 10
+                    zIndex: 10,
+                    transition: 'transform 0.1s ease-in-out'
                 }}
+                onMouseDown={e => e.currentTarget.style.transform = 'translateX(-50%) scale(0.9)'}
+                onMouseUp={e => e.currentTarget.style.transform = 'translateX(-50%) scale(1)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'translateX(-50%) scale(1)'}
             >
                 📸
             </button>
+
         </div>
     );
 });
