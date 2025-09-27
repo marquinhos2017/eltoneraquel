@@ -57,54 +57,50 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
-        const width = 1080;
-        const height = 1920;
-
-        // Forçar tamanho fixo do canvas
-        canvas.width = width;
-        canvas.height = height;
 
         let animationFrameId;
 
         const drawFrame = () => {
             const video = webcamRef.current.video;
-
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                // Desenhar vídeo redimensionando para 1080x1920
-                context.drawImage(video, 0, 0, width, height);
+                // Ajustar canvas para proporção do vídeo real
+                const videoWidth = video.videoWidth;
+                const videoHeight = video.videoHeight;
+
+                canvas.width = videoWidth;
+                canvas.height = videoHeight;
+
+                // Desenhar vídeo no canvas mantendo proporção
+                context.drawImage(video, 0, 0, videoWidth, videoHeight);
 
                 // Aplicar LUT
                 if (lutData) {
-                    const imageData = context.getImageData(0, 0, width, height);
+                    const imageData = context.getImageData(0, 0, videoWidth, videoHeight);
                     applyLUTFilter(imageData, lutData);
                     context.putImageData(imageData, 0, 0);
                 }
 
-                // Aplicar overlay
-                // Aplicar overlay mantendo proporção e centralizado
+                // Overlay mantendo proporção e centralizado
                 if (overlayImg) {
                     const imgRatio = overlayImg.width / overlayImg.height;
-                    const canvasRatio = width / height;
+                    const canvasRatio = videoWidth / videoHeight;
 
                     let drawWidth, drawHeight, offsetX, offsetY;
 
                     if (imgRatio > canvasRatio) {
-                        // Overlay mais largo que o canvas
-                        drawWidth = width;
-                        drawHeight = width / imgRatio;
+                        drawWidth = videoWidth;
+                        drawHeight = videoWidth / imgRatio;
                         offsetX = 0;
-                        offsetY = (height - drawHeight) / 2; // centraliza verticalmente
+                        offsetY = (videoHeight - drawHeight) / 2;
                     } else {
-                        // Overlay mais alto ou igual à proporção do canvas
-                        drawHeight = height;
-                        drawWidth = height * imgRatio;
-                        offsetX = (width - drawWidth) / 2; // centraliza horizontalmente
+                        drawHeight = videoHeight;
+                        drawWidth = videoHeight * imgRatio;
+                        offsetX = (videoWidth - drawWidth) / 2;
                         offsetY = 0;
                     }
 
                     context.drawImage(overlayImg, offsetX, offsetY, drawWidth, drawHeight);
                 }
-
             }
 
             animationFrameId = requestAnimationFrame(drawFrame);
@@ -112,10 +108,9 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
         drawFrame();
 
-        return () => {
-            cancelAnimationFrame(animationFrameId);
-        };
+        return () => cancelAnimationFrame(animationFrameId);
     }, [lutData, isFilterLoaded, isWebcamReady, overlayImg]);
+
 
 
     const videoConstraints = {

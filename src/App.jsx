@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import WebcamFilter from './components/WebcamFilter';
-import { FaCamera, FaPalette } from 'react-icons/fa';
+import { FaPalette } from 'react-icons/fa';
 import './App.css';
 
 function App() {
   const [selectedFilter, setSelectedFilter] = useState('');
-  const [showSplash, setShowSplash] = useState(true); // splash inicial
   const webcamRef = useRef(null);
 
   const filters = [
@@ -26,23 +25,6 @@ function App() {
     }
   };
 
-  // Esconde splash após 2 segundos
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 2000); // 2000ms = 2 segundos
-
-    return () => clearTimeout(timer); // limpa timeout se componente desmontar
-  }, []);
-
-  if (showSplash) {
-    return (
-      <div className="splash-screen">
-        <h1>Registre aqui sua foto do casamento</h1>
-      </div>
-    );
-  }
-
   return (
     <div className="App">
       <header className="App-header">
@@ -57,11 +39,6 @@ function App() {
               {filter.name}
             </button>
           ))}
-
-          <button onClick={capturePhoto} className="capture-btn">
-            <FaCamera style={{ marginRight: 8 }} />
-            Capturar
-          </button>
         </div>
       </header>
 
@@ -71,6 +48,9 @@ function App() {
           filterPath={selectedFilter}
           className="webcam-container"
         />
+
+        {/* Botão de captura estilo bolinha do iOS */}
+        <button className="capture-btn-ios" onClick={capturePhoto} />
       </main>
     </div>
   );

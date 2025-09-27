@@ -362,3 +362,23 @@ code {
     font-size: 14px;
   }
 }
+
+/* Botão de captura estilo iOS */
+.capture-btn-ios {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background-color: white;
+  border: 4px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.1s ease-in-out;
+}
+
+.capture-btn-ios:active {
+  transform: translateX(-50%) scale(0.9);
+}
