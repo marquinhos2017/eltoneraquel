@@ -5,6 +5,7 @@ import { applyLUTFilter } from './LUTFilter';
 const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
     const webcamRef = useRef(null);
     const canvasRef = useRef(null);
+    const offCanvasRef = useRef(null); // canvas offscreen único
     const [lutData, setLutData] = useState(null);
     const [isFilterLoaded, setIsFilterLoaded] = useState(false);
     const [isWebcamReady, setIsWebcamReady] = useState(false);
@@ -50,23 +51,28 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         if (!webcamRef.current || !canvasRef.current || !isWebcamReady || !isFilterLoaded) return;
 
         const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
         canvas.width = 1080;
         canvas.height = 1920;
+
+        // Criar canvas offscreen uma vez
+        if (!offCanvasRef.current) {
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = 360;
+            offCanvas.height = 640;
+            offCanvasRef.current = offCanvas;
+        }
+        const offCanvas = offCanvasRef.current;
+        const offCtx = offCanvas.getContext('2d');
 
         let animationFrameId;
 
         const draw = () => {
             const video = webcamRef.current.video;
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                const cw = 540;  // processa em resolução menor
-                const ch = 960;
+                const cw = offCanvas.width;
+                const ch = offCanvas.height;
 
-                const offCanvas = document.createElement('canvas');
-                offCanvas.width = cw;
-                offCanvas.height = ch;
-                const offCtx = offCanvas.getContext('2d');
-
+                // Ajuste proporcional
                 const vw = video.videoWidth;
                 const vh = video.videoHeight;
                 const videoRatio = vw / vh;
@@ -85,6 +91,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                     dy = (ch - dh) / 2;
                 }
 
+                offCtx.clearRect(0, 0, cw, ch);
                 offCtx.drawImage(video, dx, dy, dw, dh);
 
                 if (lutData) {
@@ -117,13 +124,11 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
     const handleWebcamLoad = () => setIsWebcamReady(true);
     const handleWebcamError = () => setIsWebcamReady(false);
 
-    // Tirar foto, salvar e compartilhar
     const handleTakeAndShare = async () => {
         if (!canvasRef.current) return;
-
         const dataUrl = canvasRef.current.toDataURL('image/png');
 
-        // Salvar no dispositivo
+        // Salvar
         const link = document.createElement('a');
         link.href = dataUrl;
         link.download = `foto-${Date.now()}.png`;
@@ -151,7 +156,6 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
     return (
         <div className={`webcam-filter ${className}`} style={{ position: 'relative', textAlign: 'center' }}>
-            {/* Botão alternar câmera */}
             <button
                 onClick={() => setFacingMode(prev => prev === 'user' ? 'environment' : 'user')}
                 style={{
@@ -209,7 +213,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 <div className="loading">Carregando filtro...</div>
             )}
 
-            {/* Botão tirar foto e compartilhar */}
+            {/* Botão estilo iOS */}
             <button
                 onClick={handleTakeAndShare}
                 style={{
@@ -237,16 +241,13 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
             >
                 📸
             </button>
-
         </div>
     );
 });
 
-// Parser para arquivos .cube
 function parseCUBE(cubeText) {
     const lines = cubeText.split('\n');
     const lut = { size: 0, data: [] };
-
     for (let line of lines) {
         line = line.trim();
         if (line.startsWith('TITLE')) continue;
