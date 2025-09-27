@@ -5,7 +5,7 @@ import { applyLUTFilter } from './LUTFilter';
 const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
     const webcamRef = useRef(null);
     const canvasRef = useRef(null);
-    const offCanvasRef = useRef(null); // canvas offscreen único
+    const offCanvasRef = useRef(null); // Canvas de preview para performance
     const [lutData, setLutData] = useState(null);
     const [isFilterLoaded, setIsFilterLoaded] = useState(false);
     const [isWebcamReady, setIsWebcamReady] = useState(false);
@@ -46,7 +46,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         loadLUT();
     }, [filterPath]);
 
-    // Aplicar filtro em tempo real
+    // Aplicar filtro em tempo real para preview
     useEffect(() => {
         if (!webcamRef.current || !canvasRef.current || !isWebcamReady || !isFilterLoaded) return;
 
@@ -54,7 +54,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         canvas.width = 1080;
         canvas.height = 1920;
 
-        // Criar canvas offscreen uma vez
+        // Canvas offscreen para preview (menor para performance)
         if (!offCanvasRef.current) {
             const offCanvas = document.createElement('canvas');
             offCanvas.width = 360;
@@ -72,7 +72,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 const cw = offCanvas.width;
                 const ch = offCanvas.height;
 
-                // Ajuste proporcional
+                // Ajuste proporcional do vídeo
                 const vw = video.videoWidth;
                 const vh = video.videoHeight;
                 const videoRatio = vw / vh;
@@ -124,9 +124,49 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
     const handleWebcamLoad = () => setIsWebcamReady(true);
     const handleWebcamError = () => setIsWebcamReady(false);
 
+    // Tirar foto em alta resolução
     const handleTakeAndShare = async () => {
-        if (!canvasRef.current) return;
-        const dataUrl = canvasRef.current.toDataURL('image/png');
+        if (!webcamRef.current) return;
+
+        // Criar canvas em alta resolução
+        const highResCanvas = document.createElement('canvas');
+        highResCanvas.width = 1080;
+        highResCanvas.height = 1920;
+        const ctx = highResCanvas.getContext('2d');
+
+        const video = webcamRef.current.video;
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        const videoRatio = vw / vh;
+        const canvasRatio = highResCanvas.width / highResCanvas.height;
+
+        let dw, dh, dx, dy;
+
+        if (videoRatio > canvasRatio) {
+            dh = highResCanvas.height;
+            dw = dh * videoRatio;
+            dx = (highResCanvas.width - dw) / 2;
+            dy = 0;
+        } else {
+            dw = highResCanvas.width;
+            dh = dw / videoRatio;
+            dx = 0;
+            dy = (highResCanvas.height - dh) / 2;
+        }
+
+        ctx.drawImage(video, dx, dy, dw, dh);
+
+        if (lutData) {
+            const imageData = ctx.getImageData(0, 0, highResCanvas.width, highResCanvas.height);
+            applyLUTFilter(imageData, lutData);
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        if (overlayImg) {
+            ctx.drawImage(overlayImg, 0, 0, highResCanvas.width, highResCanvas.height);
+        }
+
+        const dataUrl = highResCanvas.toDataURL('image/png');
 
         // Salvar
         const link = document.createElement('a');
