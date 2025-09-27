@@ -129,8 +129,8 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
 
     const videoConstraints = {
-        width: { ideal: 1080 },
-        height: { ideal: 1920 },
+        width: { ideal: 2160 },
+        height: { ideal: 3840 },
         facingMode: "user"
     };
 
