@@ -71,13 +71,13 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 if (videoRatio > canvasRatio) {
                     sh = vh;
                     sw = sh * canvasRatio;
-                    sx = (vw - sw) / 6;
+                    sx = (vw - sw) / 2;
                     sy = 0;
                 } else {
                     sw = vw;
                     sh = sw / canvasRatio;
                     sx = 0;
-                    sy = (vh - sh) / 4;
+                    sy = (vh - sh) / 2;
                 }
 
                 // Offscreen para preview em baixa resolução
@@ -88,8 +88,8 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
                 // Diminuir qualidade do preview para performance
                 const previewScale = 0.3; // 30% da resolução real
-                offCanvas.width = cw * previewScale + 100;
-                offCanvas.height = ch * previewScale + 200;
+                offCanvas.width = cw * previewScale;
+                offCanvas.height = ch * previewScale;
                 const offCtx = offCanvas.getContext('2d');
 
                 // Desenhar vídeo no offCanvas reduzido
