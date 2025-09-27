@@ -9,14 +9,11 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
     const [isFilterLoaded, setIsFilterLoaded] = useState(false);
     const [isWebcamReady, setIsWebcamReady] = useState(false);
     const [overlayImg, setOverlayImg] = useState(null);
+    const [facingMode, setFacingMode] = useState('user'); // 'user' = frontal, 'environment' = traseira
+    const [screenshot, setScreenshot] = useState(null); // Imagem capturada
 
     useImperativeHandle(ref, () => ({
-        getScreenshot: () => {
-            if (canvasRef.current) {
-                return canvasRef.current.toDataURL('image/png');
-            }
-            return null;
-        }
+        getScreenshot: () => screenshot
     }));
 
     // Carregar imagem de overlay
@@ -60,52 +57,17 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         const width = 1080;
         const height = 1920;
 
-        // Forçar tamanho fixo do canvas
         canvas.width = width;
         canvas.height = height;
 
         let animationFrameId;
-        const handleShareToInstagram = async () => {
-            if (!canvasRef.current) return;
-
-            const dataUrl = canvasRef.current.toDataURL('image/png');
-
-            try {
-                // Converte DataURL para Blob
-                const res = await fetch(dataUrl);
-                const blob = await res.blob();
-                const filesArray = [
-                    new File([blob], 'story.png', {
-                        type: 'image/png',
-                    }),
-                ];
-
-                // Usar Web Share API (somente mobile)
-                if (navigator.canShare && navigator.canShare({ files: filesArray })) {
-                    await navigator.share({
-                        files: filesArray,
-                        title: 'Minha foto filtrada',
-                        text: 'Olha só essa foto!',
-                    });
-                } else {
-                    // Caso o navegador não suporte, baixar a imagem
-                    const link = document.createElement('a');
-                    link.href = dataUrl;
-                    link.download = 'story.png';
-                    link.click();
-                    alert('Imagem baixada. Abra o Instagram e compartilhe no Stories!');
-                }
-            } catch (err) {
-                console.error('Erro ao compartilhar:', err);
-            }
-        };
 
         const drawFrame = () => {
             const video = webcamRef.current.video;
 
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                const canvasWidth = canvas.width;  // 1080
-                const canvasHeight = canvas.height; // 1920
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
 
                 const videoWidth = video.videoWidth;
                 const videoHeight = video.videoHeight;
@@ -115,36 +77,29 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
                 let drawWidth, drawHeight, offsetX, offsetY;
 
-                // Ajustar vídeo para caber dentro do canvas (sem cortar)
                 if (videoRatio > canvasRatio) {
-                    // Vídeo mais largo: ajustar altura do canvas
                     drawHeight = canvasHeight;
                     drawWidth = drawHeight * videoRatio;
-                    offsetX = (canvasWidth - drawWidth) / 2; // centralizar horizontal
+                    offsetX = (canvasWidth - drawWidth) / 2;
                     offsetY = 0;
                 } else {
-                    // Vídeo mais alto: ajustar largura do canvas
                     drawWidth = canvasWidth;
                     drawHeight = drawWidth / videoRatio;
                     offsetX = 0;
-                    offsetY = (canvasHeight - drawHeight) / 2; // centralizar vertical
+                    offsetY = (canvasHeight - drawHeight) / 2;
                 }
 
-                // Limpar canvas e preencher fundo (opcional, para não sobrar transparência)
                 context.fillStyle = "#000";
                 context.fillRect(0, 0, canvasWidth, canvasHeight);
 
-                // Desenhar vídeo
                 context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
 
-                // Aplicar LUT
                 if (lutData) {
                     const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
                     applyLUTFilter(imageData, lutData);
                     context.putImageData(imageData, 0, 0);
                 }
 
-                // Aplicar overlay
                 if (overlayImg) {
                     context.drawImage(overlayImg, 0, 0, canvasWidth, canvasHeight);
                 }
@@ -153,24 +108,19 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
             animationFrameId = requestAnimationFrame(drawFrame);
         };
 
-
         drawFrame();
 
-        return () => {
-            cancelAnimationFrame(animationFrameId);
-        };
-    }, [lutData, isFilterLoaded, isWebcamReady, overlayImg]);
-
+        return () => cancelAnimationFrame(animationFrameId);
+    }, [lutData, isFilterLoaded, isWebcamReady, overlayImg, facingMode]);
 
     const videoConstraints = {
         width: { ideal: 2160 },
         height: { ideal: 3840 },
-        facingMode: "user"
+        facingMode
     };
 
     const handleWebcamLoad = () => {
         setIsWebcamReady(true);
-        console.log('Webcam carregada');
     };
 
     const handleWebcamError = (error) => {
@@ -178,21 +128,65 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         setIsWebcamReady(false);
     };
 
+    // Capturar screenshot
+    const handleTakeScreenshot = () => {
+        if (!canvasRef.current) return;
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = 'foto.png';
+        link.click();
+
+        setScreenshot(dataUrl); // Salva a imagem capturada
+    };
+
+    // Compartilhar no Instagram
+    const handleShareToInstagram = async () => {
+        if (!screenshot) return;
+
+        try {
+            const res = await fetch(screenshot);
+            const blob = await res.blob();
+            const filesArray = [new File([blob], 'story.png', { type: 'image/png' })];
+
+            if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+                await navigator.share({
+                    files: filesArray,
+                    title: 'Minha foto filtrada',
+                    text: 'Olha só essa foto!',
+                });
+            } else {
+                const link = document.createElement('a');
+                link.href = screenshot;
+                link.download = 'story.png';
+                link.click();
+                alert('Imagem baixada. Abra o Instagram e compartilhe no Stories!');
+            }
+        } catch (err) {
+            console.error('Erro ao compartilhar:', err);
+        }
+    };
+
     return (
-        <div className={`webcam-filter ${className}`}>
+        <div className={`webcam-filter ${className}`} style={{ position: 'relative', textAlign: 'center' }}>
+            {/* Alternar câmera */}
             <button
-                onClick={handleShareToInstagram}
+                onClick={() => setFacingMode(prev => prev === 'user' ? 'environment' : 'user')}
                 style={{
-                    marginTop: '20px',
-                    padding: '10px 20px',
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    padding: '8px 16px',
                     borderRadius: '10px',
-                    backgroundColor: '#405DE6',
+                    backgroundColor: '#FFA500',
                     color: '#fff',
                     fontWeight: 'bold',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    zIndex: 10
                 }}
             >
-                Compartilhar no Instagram
+                Alternar Câmera
             </button>
 
             <Webcam
@@ -208,7 +202,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                     width: 0,
                     height: 0
                 }}
-                mirrored={true}
+                mirrored={facingMode === 'user'}
             />
 
             <canvas
@@ -231,12 +225,53 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
             {!isWebcamReady && (
                 <div className="webcam-status">
                     <p>Carregando webcam... Por favor, permita o acesso à câmera.</p>
-                    <p>Se a câmera não carregar, verifique as permissões do navegador.</p>
                 </div>
             )}
 
             {!isFilterLoaded && filterPath && (
                 <div className="loading">Carregando filtro...</div>
+            )}
+
+            {/* Botão bater foto */}
+            <button
+                onClick={handleTakeScreenshot}
+                style={{
+                    position: 'fixed',
+                    bottom: '30px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    padding: '15px 30px',
+                    borderRadius: '50%',
+                    backgroundColor: '#34A853',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    zIndex: 10
+                }}
+            >
+                📸
+            </button>
+
+            {/* Botão compartilhar Instagram (apenas após salvar) */}
+            {screenshot && (
+                <button
+                    onClick={handleShareToInstagram}
+                    style={{
+                        position: 'fixed',
+                        bottom: '100px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        padding: '10px 20px',
+                        borderRadius: '10px',
+                        backgroundColor: '#405DE6',
+                        color: '#fff',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        zIndex: 10
+                    }}
+                >
+                    Compartilhar no Instagram
+                </button>
             )}
         </div>
     );
@@ -245,20 +280,15 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 // Parser para arquivos .cube
 function parseCUBE(cubeText) {
     const lines = cubeText.split('\n');
-    const lut = {
-        size: 0,
-        data: []
-    };
+    const lut = { size: 0, data: [] };
 
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
+    for (let line of lines) {
+        line = line.trim();
         if (line.startsWith('TITLE')) continue;
         if (line.startsWith('LUT_3D_SIZE')) {
             lut.size = parseInt(line.split(' ')[1]);
             continue;
         }
-
         if (line.startsWith('#') || line === '') continue;
 
         const rgb = line.split(/\s+/).filter(Boolean);
@@ -270,7 +300,6 @@ function parseCUBE(cubeText) {
             });
         }
     }
-
     return lut;
 }
 
