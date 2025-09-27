@@ -9,7 +9,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
     const [isFilterLoaded, setIsFilterLoaded] = useState(false);
     const [isWebcamReady, setIsWebcamReady] = useState(false);
     const [overlayImg, setOverlayImg] = useState(null);
-    const [facingMode, setFacingMode] = useState('user'); // 'user' = frontal, 'environment' = traseira
+    const [facingMode, setFacingMode] = useState('user');
 
     useImperativeHandle(ref, () => ({
         getScreenshot: () => canvasRef.current?.toDataURL('image/png') || null
@@ -67,7 +67,6 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 offCanvas.height = ch;
                 const offCtx = offCanvas.getContext('2d');
 
-                // Ajuste proporcional
                 const vw = video.videoWidth;
                 const vh = video.videoHeight;
                 const videoRatio = vw / vh;
@@ -98,15 +97,12 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                     offCtx.drawImage(overlayImg, 0, 0, cw, ch);
                 }
 
-                // Desenhar no canvas principal em alta resolução
-                const mainCanvas = canvasRef.current;
-                const mainCtx = mainCanvas.getContext('2d');
-                mainCtx.drawImage(offCanvas, 0, 0, mainCanvas.width, mainCanvas.height);
+                const mainCtx = canvas.getContext('2d');
+                mainCtx.drawImage(offCanvas, 0, 0, canvas.width, canvas.height);
             }
 
             animationFrameId = requestAnimationFrame(draw);
         };
-
 
         draw();
         return () => cancelAnimationFrame(animationFrameId);
@@ -121,12 +117,19 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
     const handleWebcamLoad = () => setIsWebcamReady(true);
     const handleWebcamError = () => setIsWebcamReady(false);
 
-    // Tirar foto e compartilhar
+    // Tirar foto, salvar e compartilhar
     const handleTakeAndShare = async () => {
         if (!canvasRef.current) return;
 
         const dataUrl = canvasRef.current.toDataURL('image/png');
 
+        // Salvar no dispositivo
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `foto-${Date.now()}.png`;
+        link.click();
+
+        // Compartilhar
         try {
             const res = await fetch(dataUrl);
             const blob = await res.blob();
@@ -139,11 +142,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                     text: 'Olha só essa foto!',
                 });
             } else {
-                const link = document.createElement('a');
-                link.href = dataUrl;
-                link.download = 'story.png';
-                link.click();
-                alert('Imagem baixada. Abra o Instagram e compartilhe no Stories!');
+                alert('Imagem salva! Abra o Instagram e compartilhe no Stories.');
             }
         } catch (err) {
             console.error('Erro ao compartilhar:', err);

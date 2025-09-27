@@ -50,7 +50,7 @@ function App() {
         />
 
         {/* Botão de captura estilo bolinha do iOS */}
-        <button className="capture-btn-ios" onClick={capturePhoto} />
+
       </main>
     </div>
   );
