@@ -63,8 +63,8 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
                 const vw = video.videoWidth;
                 const vh = video.videoHeight;
-                const videoRatio = vw / vh * 2;
-                const canvasRatio = cw / ch * 2;
+                const videoRatio = vw / vh * 4;
+                const canvasRatio = cw / ch;
 
                 let sx, sy, sw, sh;
 
