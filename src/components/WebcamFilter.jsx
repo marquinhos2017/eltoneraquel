@@ -70,24 +70,50 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
             const video = webcamRef.current.video;
 
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                // Desenhar vídeo redimensionando para 1080x1920
-                context.drawImage(video, 0, 0, width, height);
+                const videoWidth = video.videoWidth;
+                const videoHeight = video.videoHeight;
+
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+
+                // Calcular proporção da webcam e canvas
+                const videoRatio = videoWidth / videoHeight;
+                const canvasRatio = canvasWidth / canvasHeight;
+
+                let drawWidth, drawHeight, offsetX, offsetY;
+
+                if (videoRatio > canvasRatio) {
+                    // Vídeo mais largo que o canvas: cortar laterais
+                    drawHeight = canvasHeight;
+                    drawWidth = videoRatio * drawHeight;
+                    offsetX = -(drawWidth - canvasWidth) / 2;
+                    offsetY = 0;
+                } else {
+                    // Vídeo mais alto que o canvas: cortar topo e base
+                    drawWidth = canvasWidth;
+                    drawHeight = drawWidth / videoRatio;
+                    offsetX = 0;
+                    offsetY = -(drawHeight - canvasHeight) / 2;
+                }
+
+                context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
 
                 // Aplicar LUT
                 if (lutData) {
-                    const imageData = context.getImageData(0, 0, width, height);
+                    const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
                     applyLUTFilter(imageData, lutData);
                     context.putImageData(imageData, 0, 0);
                 }
 
                 // Aplicar overlay
                 if (overlayImg) {
-                    context.drawImage(overlayImg, 0, 0, width, height);
+                    context.drawImage(overlayImg, 0, 0, canvasWidth, canvasHeight);
                 }
             }
 
             animationFrameId = requestAnimationFrame(drawFrame);
         };
+
 
         drawFrame();
 
