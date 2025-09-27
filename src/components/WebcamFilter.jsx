@@ -58,58 +58,71 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
 
-        let animationFrameId;
-
         const drawFrame = () => {
             const video = webcamRef.current.video;
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                // Ajustar canvas para proporção do vídeo real
-                const videoWidth = video.videoWidth;
-                const videoHeight = video.videoHeight;
+                // Definir canvas para ocupar 90% da largura da tela, mantendo proporção retrato
+                const canvasWidth = window.innerWidth * 0.9;
+                const canvasHeight = canvasWidth * (16 / 9); // ou você pode calcular conforme proporção vídeo
 
-                canvas.width = videoWidth;
-                canvas.height = videoHeight;
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
 
-                // Desenhar vídeo no canvas mantendo proporção
-                context.drawImage(video, 0, 0, videoWidth, videoHeight);
+                // Centralizar vídeo e ajustar proporção
+                const videoRatio = video.videoWidth / video.videoHeight;
+                let drawWidth = canvas.width;
+                let drawHeight = canvas.height;
+
+                if (videoRatio > 1) { // vídeo mais largo que alto
+                    drawHeight = canvas.height;
+                    drawWidth = drawHeight * videoRatio;
+                } else { // vídeo mais alto ou quadrado
+                    drawWidth = canvas.width;
+                    drawHeight = drawWidth / videoRatio;
+                }
+
+                const offsetX = (canvas.width - drawWidth) / 2;
+                const offsetY = (canvas.height - drawHeight) / 2;
+
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
 
                 // Aplicar LUT
                 if (lutData) {
-                    const imageData = context.getImageData(0, 0, videoWidth, videoHeight);
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
                     applyLUTFilter(imageData, lutData);
                     context.putImageData(imageData, 0, 0);
                 }
 
-                // Overlay mantendo proporção e centralizado
+                // Overlay centralizado
                 if (overlayImg) {
                     const imgRatio = overlayImg.width / overlayImg.height;
-                    const canvasRatio = videoWidth / videoHeight;
+                    const canvasRatio = canvas.width / canvas.height;
 
-                    let drawWidth, drawHeight, offsetX, offsetY;
+                    let overlayWidth, overlayHeight, overlayX, overlayY;
 
                     if (imgRatio > canvasRatio) {
-                        drawWidth = videoWidth;
-                        drawHeight = videoWidth / imgRatio;
-                        offsetX = 0;
-                        offsetY = (videoHeight - drawHeight) / 2;
+                        overlayWidth = canvas.width;
+                        overlayHeight = canvas.width / imgRatio;
+                        overlayX = 0;
+                        overlayY = (canvas.height - overlayHeight) / 2;
                     } else {
-                        drawHeight = videoHeight;
-                        drawWidth = videoHeight * imgRatio;
-                        offsetX = (videoWidth - drawWidth) / 2;
-                        offsetY = 0;
+                        overlayHeight = canvas.height;
+                        overlayWidth = canvas.height * imgRatio;
+                        overlayX = (canvas.width - overlayWidth) / 2;
+                        overlayY = 0;
                     }
 
-                    context.drawImage(overlayImg, offsetX, offsetY, drawWidth, drawHeight);
+                    context.drawImage(overlayImg, overlayX, overlayY, overlayWidth, overlayHeight);
                 }
             }
 
-            animationFrameId = requestAnimationFrame(drawFrame);
+            requestAnimationFrame(drawFrame);
         };
 
         drawFrame();
-
-        return () => cancelAnimationFrame(animationFrameId);
     }, [lutData, isFilterLoaded, isWebcamReady, overlayImg]);
+
 
 
 
