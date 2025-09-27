@@ -65,6 +65,40 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         canvas.height = height;
 
         let animationFrameId;
+        const handleShareToInstagram = async () => {
+            if (!canvasRef.current) return;
+
+            const dataUrl = canvasRef.current.toDataURL('image/png');
+
+            try {
+                // Converte DataURL para Blob
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+                const filesArray = [
+                    new File([blob], 'story.png', {
+                        type: 'image/png',
+                    }),
+                ];
+
+                // Usar Web Share API (somente mobile)
+                if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+                    await navigator.share({
+                        files: filesArray,
+                        title: 'Minha foto filtrada',
+                        text: 'Olha só essa foto!',
+                    });
+                } else {
+                    // Caso o navegador não suporte, baixar a imagem
+                    const link = document.createElement('a');
+                    link.href = dataUrl;
+                    link.download = 'story.png';
+                    link.click();
+                    alert('Imagem baixada. Abra o Instagram e compartilhe no Stories!');
+                }
+            } catch (err) {
+                console.error('Erro ao compartilhar:', err);
+            }
+        };
 
         const drawFrame = () => {
             const video = webcamRef.current.video;
@@ -146,6 +180,21 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
     return (
         <div className={`webcam-filter ${className}`}>
+            <button
+                onClick={handleShareToInstagram}
+                style={{
+                    marginTop: '20px',
+                    padding: '10px 20px',
+                    borderRadius: '10px',
+                    backgroundColor: '#405DE6',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                }}
+            >
+                Compartilhar no Instagram
+            </button>
+
             <Webcam
                 ref={webcamRef}
                 audio={false}
