@@ -62,31 +62,30 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
             const video = webcamRef.current.video;
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
                 // Usar proporção da tela do dispositivo
-                const canvasWidth = window.innerWidth * 0.95; // 95% da largura da tela
-                const canvasHeight = window.innerHeight * 0.7; // 70% da altura
+                const canvasWidth = window.innerWidth * 0.9;
+                const canvasHeight = canvasWidth * (16 / 9); // retrato
 
-                canvas.width = canvasWidth;
-                canvas.height = canvasHeight;
-
-                const videoRatio = video.videoWidth / video.videoHeight;
+                const videoRatio = video.videoWidth / video.videoHeight; // proporção do vídeo
                 const canvasRatio = canvasWidth / canvasHeight;
 
                 let drawWidth, drawHeight, offsetX, offsetY;
 
                 if (videoRatio > canvasRatio) {
-                    drawWidth = canvasWidth;
-                    drawHeight = canvasWidth / videoRatio;
-                    offsetX = 0;
-                    offsetY = (canvasHeight - drawHeight) / 2;
-                } else {
                     drawHeight = canvasHeight;
-                    drawWidth = canvasHeight * videoRatio;
+                    drawWidth = drawHeight * videoRatio;
                     offsetX = (canvasWidth - drawWidth) / 2;
                     offsetY = 0;
+                } else {
+                    drawWidth = canvasWidth;
+                    drawHeight = drawWidth / videoRatio;
+                    offsetX = 0;
+                    offsetY = (canvasHeight - drawHeight) / 2;
                 }
 
                 context.clearRect(0, 0, canvasWidth, canvasHeight);
                 context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+
+
 
                 // Aplicar LUT
                 if (lutData) {
@@ -128,10 +127,12 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
 
     const videoConstraints = {
+        facingMode: "user",
         width: { ideal: 1080 },
         height: { ideal: 1920 },
-        facingMode: "user"
+        aspectRatio: 9 / 16 // força retrato
     };
+
 
     const handleWebcamLoad = () => {
         setIsWebcamReady(true);
