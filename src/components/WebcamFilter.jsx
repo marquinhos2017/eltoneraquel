@@ -69,42 +69,46 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 let sx, sy, sw, sh;
 
                 if (videoRatio > canvasRatio) {
-                    // vídeo mais largo que canvas -> cortar horizontal
                     sh = vh;
                     sw = sh * canvasRatio;
                     sx = (vw - sw) / 2;
                     sy = 0;
                 } else {
-                    // vídeo mais alto que canvas -> cortar vertical
                     sw = vw;
                     sh = sw / canvasRatio;
                     sx = 0;
                     sy = (vh - sh) / 2;
                 }
 
-                // Offscreen para aplicar LUT e overlay
+                // Offscreen para preview em baixa resolução
                 if (!offCanvasRef.current) {
                     offCanvasRef.current = document.createElement('canvas');
                 }
                 const offCanvas = offCanvasRef.current;
-                offCanvas.width = cw;
-                offCanvas.height = ch;
+
+                // Diminuir qualidade do preview para performance
+                const previewScale = 0.3; // 30% da resolução real
+                offCanvas.width = cw * previewScale;
+                offCanvas.height = ch * previewScale;
                 const offCtx = offCanvas.getContext('2d');
 
-                offCtx.clearRect(0, 0, cw, ch);
-                offCtx.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
+                // Desenhar vídeo no offCanvas reduzido
+                offCtx.clearRect(0, 0, offCanvas.width, offCanvas.height);
+                offCtx.drawImage(video, sx, sy, sw, sh, 0, 0, offCanvas.width, offCanvas.height);
 
+                // Aplicar LUT no offCanvas
                 if (lutData) {
-                    const imageData = offCtx.getImageData(0, 0, cw, ch);
+                    const imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
                     applyLUTFilter(imageData, lutData);
                     offCtx.putImageData(imageData, 0, 0);
                 }
 
+                // Overlay no offCanvas
                 if (overlayImg) {
-                    offCtx.drawImage(overlayImg, 0, 0, cw, ch);
+                    offCtx.drawImage(overlayImg, 0, 0, offCanvas.width, offCanvas.height);
                 }
 
-                // desenha no canvas principal
+                // Desenhar no canvas principal escalando de volta
                 ctx.clearRect(0, 0, cw, ch);
                 ctx.drawImage(offCanvas, 0, 0, cw, ch);
             }
@@ -115,6 +119,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         draw();
         return () => cancelAnimationFrame(animationFrameId);
     }, [lutData, isFilterLoaded, isWebcamReady, overlayImg]);
+
 
 
     const videoConstraints = {
