@@ -19,7 +19,6 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         }
     }));
 
-    // Carregar imagem de overlay
     useEffect(() => {
         const img = new Image();
         img.crossOrigin = "anonymous";
@@ -27,7 +26,6 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         img.onload = () => setOverlayImg(img);
     }, []);
 
-    // Carregar arquivo .cube (LUT)
     useEffect(() => {
         const loadLUT = async () => {
             if (!filterPath) {
@@ -35,7 +33,6 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 setIsFilterLoaded(true);
                 return;
             }
-
             try {
                 const response = await fetch(filterPath);
                 const cubeText = await response.text();
@@ -47,11 +44,9 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 setIsFilterLoaded(true);
             }
         };
-
         loadLUT();
     }, [filterPath]);
 
-    // Aplicar filtro em tempo real
     useEffect(() => {
         if (!webcamRef.current || !canvasRef.current || !isWebcamReady || !isFilterLoaded) return;
 
@@ -61,31 +56,35 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         const drawFrame = () => {
             const video = webcamRef.current.video;
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                // Usar proporção da tela do dispositivo
-                const canvasWidth = window.innerWidth * 0.9;
-                const canvasHeight = canvasWidth * (16 / 9); // retrato
+                // Dimensões do canvas = dimensões da tela do dispositivo
+                const canvasWidth = window.innerWidth;
+                const canvasHeight = window.innerHeight;
 
-                const videoRatio = video.videoWidth / video.videoHeight; // proporção do vídeo
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
+
+                const videoRatio = video.videoWidth / video.videoHeight;
                 const canvasRatio = canvasWidth / canvasHeight;
 
                 let drawWidth, drawHeight, offsetX, offsetY;
 
                 if (videoRatio > canvasRatio) {
-                    drawHeight = canvasHeight;
-                    drawWidth = drawHeight * videoRatio;
-                    offsetX = (canvasWidth - drawWidth) / 2;
-                    offsetY = 0;
-                } else {
+                    // Video mais largo que o canvas
                     drawWidth = canvasWidth;
-                    drawHeight = drawWidth / videoRatio;
+                    drawHeight = canvasWidth / videoRatio;
                     offsetX = 0;
                     offsetY = (canvasHeight - drawHeight) / 2;
+                } else {
+                    // Video mais alto que o canvas
+                    drawHeight = canvasHeight;
+                    drawWidth = canvasHeight * videoRatio;
+                    offsetX = (canvasWidth - drawWidth) / 2;
+                    offsetY = 0;
                 }
 
+                // Limpar canvas e desenhar vídeo proporcional
                 context.clearRect(0, 0, canvasWidth, canvasHeight);
                 context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
-
-
 
                 // Aplicar LUT
                 if (lutData) {
@@ -123,29 +122,21 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         drawFrame();
     }, [lutData, isFilterLoaded, isWebcamReady, overlayImg]);
 
-
-
-
     const videoConstraints = {
         facingMode: "user",
         width: { ideal: 1080 },
         height: { ideal: 1920 },
-        aspectRatio: 9 / 16 // força retrato
+        aspectRatio: 9 / 16
     };
 
-
-    const handleWebcamLoad = () => {
-        setIsWebcamReady(true);
-        console.log('Webcam carregada');
-    };
-
+    const handleWebcamLoad = () => setIsWebcamReady(true);
     const handleWebcamError = (error) => {
         console.error('Erro na webcam:', error);
         setIsWebcamReady(false);
     };
 
     return (
-        <div className={`webcam-filter ${className}`}>
+        <div className={`webcam-filter ${className}`} style={{ width: '100%', height: '100%', position: 'relative' }}>
             <Webcam
                 ref={webcamRef}
                 audio={false}
@@ -153,12 +144,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 videoConstraints={videoConstraints}
                 onUserMedia={handleWebcamLoad}
                 onUserMediaError={handleWebcamError}
-                style={{
-                    visibility: 'hidden',
-                    position: 'absolute',
-                    width: 0,
-                    height: 0
-                }}
+                style={{ visibility: 'hidden', position: 'absolute', width: 0, height: 0 }}
                 mirrored={true}
             />
 
@@ -166,16 +152,13 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 ref={canvasRef}
                 className="webcam-canvas"
                 style={{
-                    width: '90%',
-                    height: '90%',
-                    maxWidth: '1080px',
-                    maxHeight: '1920px',
-                    margin: 'auto',
+                    width: '100%',
+                    height: '100%',
                     display: 'block',
+                    objectFit: 'contain', // mostra todo o vídeo proporcionalmente
                     borderRadius: '20px',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
                     backgroundColor: isWebcamReady ? 'transparent' : '#333',
-                    objectFit: 'cover'
                 }}
             />
 
@@ -196,30 +179,18 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 // Parser para arquivos .cube
 function parseCUBE(cubeText) {
     const lines = cubeText.split('\n');
-    const lut = {
-        size: 0,
-        data: []
-    };
+    const lut = { size: 0, data: [] };
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-
         if (line.startsWith('TITLE')) continue;
         if (line.startsWith('LUT_3D_SIZE')) {
             lut.size = parseInt(line.split(' ')[1]);
             continue;
         }
-
         if (line.startsWith('#') || line === '') continue;
-
         const rgb = line.split(/\s+/).filter(Boolean);
-        if (rgb.length >= 3) {
-            lut.data.push({
-                r: parseFloat(rgb[0]),
-                g: parseFloat(rgb[1]),
-                b: parseFloat(rgb[2])
-            });
-        }
+        if (rgb.length >= 3) lut.data.push({ r: parseFloat(rgb[0]), g: parseFloat(rgb[1]), b: parseFloat(rgb[2]) });
     }
 
     return lut;
