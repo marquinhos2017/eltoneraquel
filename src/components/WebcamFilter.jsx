@@ -58,26 +58,26 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         const draw = () => {
             const video = webcamRef.current.video;
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                const cw = canvas.width = 1080 / 2;    // canvas portrait
-                const ch = canvas.height = 1920 / 2;
+                const cw = canvas.width = 1080;    // canvas portrait
+                const ch = canvas.height = 1920;
 
                 const vw = video.videoWidth;
                 const vh = video.videoHeight;
-                const videoRatio = vw / vh;
-                const canvasRatio = cw / ch;
+                const videoRatio = vw / vh * 2;
+                const canvasRatio = cw / ch * 2;
 
                 let sx, sy, sw, sh;
 
                 if (videoRatio > canvasRatio) {
                     sh = vh;
                     sw = sh * canvasRatio;
-                    sx = (vw - sw) / 4;
+                    sx = (vw - sw) / 2;
                     sy = 0;
                 } else {
                     sw = vw;
                     sh = sw / canvasRatio;
                     sx = 0;
-                    sy = (vh - sh) / 4;
+                    sy = (vh - sh) / 2;
                 }
 
                 // Offscreen para preview em baixa resolução
