@@ -10,13 +10,12 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
     const [isWebcamReady, setIsWebcamReady] = useState(false);
     const [overlayImg, setOverlayImg] = useState(null);
     const [facingMode, setFacingMode] = useState('user'); // 'user' = frontal, 'environment' = traseira
-    const [screenshot, setScreenshot] = useState(null); // Imagem capturada
 
     useImperativeHandle(ref, () => ({
-        getScreenshot: () => screenshot
+        getScreenshot: () => canvasRef.current?.toDataURL('image/png') || null
     }));
 
-    // Carregar imagem de overlay
+    // Carregar overlay
     useEffect(() => {
         const img = new Image();
         img.crossOrigin = "anonymous";
@@ -24,7 +23,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         img.onload = () => setOverlayImg(img);
     }, []);
 
-    // Carregar arquivo .cube (LUT)
+    // Carregar LUT
     useEffect(() => {
         const loadLUT = async () => {
             if (!filterPath) {
@@ -32,7 +31,6 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 setIsFilterLoaded(true);
                 return;
             }
-
             try {
                 const response = await fetch(filterPath);
                 const cubeText = await response.text();
@@ -44,7 +42,6 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 setIsFilterLoaded(true);
             }
         };
-
         loadLUT();
     }, [filterPath]);
 
@@ -53,100 +50,76 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
         if (!webcamRef.current || !canvasRef.current || !isWebcamReady || !isFilterLoaded) return;
 
         const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-        const width = 1080;
-        const height = 1920;
-
-        canvas.width = width;
-        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        canvas.width = 1080;
+        canvas.height = 1920;
 
         let animationFrameId;
 
-        const drawFrame = () => {
+        const draw = () => {
             const video = webcamRef.current.video;
-
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                const canvasWidth = canvas.width;
-                const canvasHeight = canvas.height;
+                const cw = canvas.width;
+                const ch = canvas.height;
+                const vw = video.videoWidth;
+                const vh = video.videoHeight;
 
-                const videoWidth = video.videoWidth;
-                const videoHeight = video.videoHeight;
+                const videoRatio = vw / vh;
+                const canvasRatio = cw / ch;
 
-                const videoRatio = videoWidth / videoHeight;
-                const canvasRatio = canvasWidth / canvasHeight;
-
-                let drawWidth, drawHeight, offsetX, offsetY;
+                let dw, dh, dx, dy;
 
                 if (videoRatio > canvasRatio) {
-                    drawHeight = canvasHeight;
-                    drawWidth = drawHeight * videoRatio;
-                    offsetX = (canvasWidth - drawWidth) / 2;
-                    offsetY = 0;
+                    dh = ch;
+                    dw = dh * videoRatio;
+                    dx = (cw - dw) / 2;
+                    dy = 0;
                 } else {
-                    drawWidth = canvasWidth;
-                    drawHeight = drawWidth / videoRatio;
-                    offsetX = 0;
-                    offsetY = (canvasHeight - drawHeight) / 2;
+                    dw = cw;
+                    dh = dw / videoRatio;
+                    dx = 0;
+                    dy = (ch - dh) / 2;
                 }
 
-                context.fillStyle = "#000";
-                context.fillRect(0, 0, canvasWidth, canvasHeight);
-
-                context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+                ctx.fillStyle = "#000";
+                ctx.fillRect(0, 0, cw, ch);
+                ctx.drawImage(video, dx, dy, dw, dh);
 
                 if (lutData) {
-                    const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
+                    const imageData = ctx.getImageData(0, 0, cw, ch);
                     applyLUTFilter(imageData, lutData);
-                    context.putImageData(imageData, 0, 0);
+                    ctx.putImageData(imageData, 0, 0);
                 }
 
                 if (overlayImg) {
-                    context.drawImage(overlayImg, 0, 0, canvasWidth, canvasHeight);
+                    ctx.drawImage(overlayImg, 0, 0, cw, ch);
                 }
             }
 
-            animationFrameId = requestAnimationFrame(drawFrame);
+            animationFrameId = requestAnimationFrame(draw);
         };
 
-        drawFrame();
-
+        draw();
         return () => cancelAnimationFrame(animationFrameId);
     }, [lutData, isFilterLoaded, isWebcamReady, overlayImg, facingMode]);
 
     const videoConstraints = {
-        width: { ideal: 2160 },
-        height: { ideal: 3840 },
+        width: { min: 1080, ideal: 2160, max: 3840 },
+        height: { min: 1920, ideal: 3840, max: 7680 },
         facingMode
     };
 
-    const handleWebcamLoad = () => {
-        setIsWebcamReady(true);
-    };
+    const handleWebcamLoad = () => setIsWebcamReady(true);
+    const handleWebcamError = () => setIsWebcamReady(false);
 
-    const handleWebcamError = (error) => {
-        console.error('Erro na webcam:', error);
-        setIsWebcamReady(false);
-    };
-
-    // Capturar screenshot
-    const handleTakeScreenshot = () => {
+    // Tirar foto e compartilhar
+    const handleTakeAndShare = async () => {
         if (!canvasRef.current) return;
+
         const dataUrl = canvasRef.current.toDataURL('image/png');
 
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = 'foto.png';
-        link.click();
-
-        setScreenshot(dataUrl); // Salva a imagem capturada
-    };
-
-    // Compartilhar no Instagram
-    const handleShareToInstagram = async () => {
-        if (!screenshot) return;
-
         try {
-            const res = await fetch(screenshot);
+            const res = await fetch(dataUrl);
             const blob = await res.blob();
             const filesArray = [new File([blob], 'story.png', { type: 'image/png' })];
 
@@ -158,7 +131,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 });
             } else {
                 const link = document.createElement('a');
-                link.href = screenshot;
+                link.href = dataUrl;
                 link.download = 'story.png';
                 link.click();
                 alert('Imagem baixada. Abra o Instagram e compartilhe no Stories!');
@@ -170,23 +143,24 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
 
     return (
         <div className={`webcam-filter ${className}`} style={{ position: 'relative', textAlign: 'center' }}>
-            {/* Alternar câmera */}
+            {/* Botão alternar câmera */}
             <button
                 onClick={() => setFacingMode(prev => prev === 'user' ? 'environment' : 'user')}
                 style={{
                     position: 'absolute',
                     top: '10px',
                     right: '10px',
-                    padding: '8px 16px',
-                    borderRadius: '10px',
+                    padding: '10px',
+                    borderRadius: '50%',
                     backgroundColor: '#FFA500',
                     color: '#fff',
                     fontWeight: 'bold',
                     cursor: 'pointer',
-                    zIndex: 10
+                    zIndex: 10,
+                    fontSize: '18px'
                 }}
             >
-                Alternar Câmera
+                🔄
             </button>
 
             <Webcam
@@ -196,12 +170,7 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 videoConstraints={videoConstraints}
                 onUserMedia={handleWebcamLoad}
                 onUserMediaError={handleWebcamError}
-                style={{
-                    visibility: 'hidden',
-                    position: 'absolute',
-                    width: 0,
-                    height: 0
-                }}
+                style={{ visibility: 'hidden', position: 'absolute', width: 0, height: 0 }}
                 mirrored={facingMode === 'user'}
             />
 
@@ -232,47 +201,25 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 <div className="loading">Carregando filtro...</div>
             )}
 
-            {/* Botão bater foto */}
+            {/* Botão tirar foto e compartilhar */}
             <button
-                onClick={handleTakeScreenshot}
+                onClick={handleTakeAndShare}
                 style={{
                     position: 'fixed',
                     bottom: '30px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    padding: '15px 30px',
+                    padding: '15px 25px',
                     borderRadius: '50%',
                     backgroundColor: '#34A853',
                     color: '#fff',
-                    fontWeight: 'bold',
+                    fontSize: '24px',
                     cursor: 'pointer',
                     zIndex: 10
                 }}
             >
                 📸
             </button>
-
-            {/* Botão compartilhar Instagram (apenas após salvar) */}
-            {screenshot && (
-                <button
-                    onClick={handleShareToInstagram}
-                    style={{
-                        position: 'fixed',
-                        bottom: '100px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        padding: '10px 20px',
-                        borderRadius: '10px',
-                        backgroundColor: '#405DE6',
-                        color: '#fff',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        zIndex: 10
-                    }}
-                >
-                    Compartilhar no Instagram
-                </button>
-            )}
         </div>
     );
 });
