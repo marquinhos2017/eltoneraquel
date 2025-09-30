@@ -87,10 +87,10 @@ const WebcamFilter = forwardRef(({ filterPath, className }, ref) => {
                 const offCanvas = offCanvasRef.current;
 
                 // Diminuir qualidade do preview para performance
-                const previewScale = 0.3; // 30% da resolução real
+                const previewScale = 0.5; // 30% da resolução real
                 offCanvas.width = cw * previewScale;
                 offCanvas.height = ch * previewScale;
-                const offCtx = offCanvas.getContext('2d');
+                const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
 
                 // Desenhar vídeo no offCanvas reduzido
                 offCtx.clearRect(0, 0, offCanvas.width, offCanvas.height);
